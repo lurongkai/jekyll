@@ -15,8 +15,8 @@ module Jekyll
       super
       if markup.strip =~ SYNTAX
         @lang = $1
+        @options = {}
         if defined?($2) && $2 != ''
-          tmp_options = {}
           $2.split.each do |opt|
             key, value = opt.split('=')
             if value.nil?
@@ -26,13 +26,8 @@ module Jekyll
                 value = true
               end
             end
-            tmp_options[key] = value
+            @options[key] = value
           end
-          tmp_options = tmp_options.to_a.sort.collect { |opt| opt.join('=') }
-          # additional options to pass to Albino
-          @options = { 'O' => tmp_options.join(',') }
-        else
-          @options = {}
         end
       else
         raise SyntaxError.new("Syntax Error in 'highlight' - Valid syntax: highlight <lang> [linenos]")
@@ -48,7 +43,13 @@ module Jekyll
     end
 
     def render_pygments(context, code)
-      output = add_code_tags(Albino.new(code, @lang).to_s(@options), @lang)
+      @options[:encoding] = 'utf-8'
+
+      output = add_code_tags(
+        Pygments.highlight(code, :lexer => @lang, :options => @options),
+        @lang
+      )
+
       output = context["pygments_prefix"] + output if context["pygments_prefix"]
       output = output + context["pygments_suffix"] if context["pygments_suffix"]
       output
